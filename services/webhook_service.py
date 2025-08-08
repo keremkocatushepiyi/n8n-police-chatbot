@@ -43,7 +43,7 @@ async def submit_policy_to_n8n(user_id: str, policy_number: str) -> str:
 
                 # Eğer liste geldiyse (örneğin: [{ "output": "..." }])
                 if isinstance(json_data, list) and len(json_data) > 0:
-                    return json_data[0].get("output", "Poliçen işlendi.")
+                    return json_data[0].get("output", "Poliçen işlenemedi.")
                 elif isinstance(json_data, dict):
                     return json_data.get("response", "Poliçen işlendi.")
                 else:
