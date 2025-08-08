@@ -92,3 +92,48 @@ async function submitPolicy() {
   const response = data.response || "Poliçen işleniyor...";
   addMessage(response, "bot");
 }
+
+async function submitPolicy() {
+  const input = document.getElementById("policy-number");
+  const value = input.value.trim();
+
+  if (!value) {
+    alert("Lütfen geçerli bir poliçe numarası girin.");
+    return;
+  }
+
+  sessionStorage.setItem("policy_number", value);
+  sessionStorage.setItem("user_id", getUserId());
+
+  // Poliçe kutusundaki formu gizle, loading'i göster
+  input.style.display = "none";
+  document.querySelector("#policy-box h2").style.display = "none";
+  document.querySelector("#policy-box button").style.display = "none";
+  document.getElementById("loading").style.display = "block";
+
+  try {
+    // ✅ N8N cevabını bekle
+    const res = await fetch("/submit-policy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: getUserId(),
+        policy_number: value
+      })
+    });
+
+    // ❗ n8n geç cevap verirse, burası da bekleyecek
+    const data = await res.json();
+    const response = data.response || "Poliçen işlendi.";
+
+    // ✅ N8N'den veri geldikten sonra chat'i aç
+    document.getElementById("policy-box").style.display = "none";
+    document.getElementById("chat-container").style.display = "flex";
+
+    addMessage(response, "bot");
+
+  } catch (error) {
+    alert("Bir hata oluştu: " + error.message);
+  }
+}
+

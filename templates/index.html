@@ -8,23 +8,25 @@
 <body>
 
   <!-- Poliçe Giriş Kutusu -->
-  <div class="policy-box" id="policy-box">
-    <h2>Poliçe Numaranızı Girin</h2>
-    <input type="text" id="policy-number" placeholder="Örn: P123456789">
-    <button onclick="submitPolicy()">Başla</button>
-  </div>
+<div class="policy-box" id="policy-box">
+  <h2>Poliçe Numaranızı Girin</h2>
+  <input type="text" id="policy-number" placeholder="Örn: P123456789">
+  <button onclick="submitPolicy()">Başla</button>
 
-  <!-- Chat Kutusu -->
-  <div class="chat-container">
-    <div class="chat-box" id="chat-box">
-      <!-- Mesajlar buraya gelecek -->
-    </div>
-
-    <div class="input-area">
-      <textarea id="prompt" rows="1" placeholder="Bir şeyler yaz..." onkeydown="handleEnter(event)"></textarea>
-      <button onclick="sendPrompt()">Gönder</button>
-    </div>
+  <div id="loading" class="loading" style="display: none;">
+    <div class="spinner"></div>
+    <p>Poliçen işleniyor, lütfen bekleyin...</p>
   </div>
+</div>
+
+<!-- Chat Kutusu -->
+<div class="chat-container" id="chat-container" style="display: none;">
+  <div class="chat-box" id="chat-box"></div>
+  <div class="input-area">
+    <textarea id="prompt" rows="1" placeholder="Bir şeyler yaz..." onkeydown="handleEnter(event)"></textarea>
+    <button onclick="sendPrompt()">Gönder</button>
+  </div>
+</div>
 
   <script src="/static/js/chat.js"></script>
 </body>

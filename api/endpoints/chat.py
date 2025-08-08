@@ -34,3 +34,4 @@ async def submit_policy(request: Request):
     from controllers.policy_controller import handle_policy
     response = await handle_policy(user_id, policy_number)
     return {"response": response}
+
