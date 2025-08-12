@@ -2,27 +2,45 @@
 import httpx
 from core import config
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
-def _extract_output(json_data):
-    # n8n bazen list, bazen dict döndürür
-    if isinstance(json_data, list) and json_data:
-        # ilk itemdan output/response alanını dene
-        first = json_data[0]
-        return first.get("output") or first.get("response")
-    if isinstance(json_data, dict):
-        return json_data.get("output") or json_data.get("response")
+def _extract_output(jd: Any):
+    try:
+        obj = jd[0] if isinstance(jd, list) and jd else jd
+        if isinstance(obj, dict):
+            return (
+                obj.get("output")
+                or obj.get("response")
+                or obj.get("message")
+                or obj.get("result")
+                or (obj.get("data") or {}).get("response")
+            )
+    except Exception:
+        pass
     return None
 
-async def send_to_n8n(prompt: str, user_id: str, policy_number: str) -> str:
-    # URL kontrolü
+def _extract_session(jd: Any):
+    try:
+        obj = jd[0] if isinstance(jd, list) and jd else jd
+        if isinstance(obj, dict):
+            return (
+                obj.get("session_id")
+                or (obj.get("data") or {}).get("session_id")
+            )
+    except Exception:
+        pass
+    return None
+
+async def send_to_n8n(prompt: str, user_id: str, session_id: str, policy_number: str) -> str:
     if not getattr(config, "N8N_WEBHOOK_URL", None):
         return "Hata: N8N_WEBHOOK_URL tanımlı değil."
 
     payload = {
         "prompt": prompt,
         "user_id": user_id,
+        "session_id": session_id,      # <<< önemli
         "policy_number": policy_number,
     }
 
@@ -30,15 +48,13 @@ async def send_to_n8n(prompt: str, user_id: str, policy_number: str) -> str:
         async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(config.N8N_WEBHOOK_URL, json=payload)
             resp.raise_for_status()
-
             try:
                 jd = resp.json()
-            except Exception as je:
-                logger.warning("JSON parse hatası: %s | text=%s", je, resp.text[:500])
+            except Exception:
                 return resp.text or "Cevap alınamadı."
 
-            out = _extract_output(jd)
-            return out or "Cevap alınamadı."
+            # İstersen burada da session_id yakalayıp tutabilirsin
+            return _extract_output(jd) or "Cevap alınamadı."
     except httpx.HTTPStatusError as he:
         logger.error("HTTP hatası: %s | body=%s", he.response.status_code, he.response.text[:500])
         return f"HTTP hatası: {he.response.status_code}"
@@ -49,37 +65,28 @@ async def send_to_n8n(prompt: str, user_id: str, policy_number: str) -> str:
         logger.exception("Bilinmeyen hata:")
         return f"Hata: {e}"
 
-async def submit_policy_to_n8n(user_id: str, policy_number: str) -> str:
+async def submit_policy_to_n8n(user_id: str, session_id: str, policy_number: str) -> str:
     if not getattr(config, "N8N_POLICY_WEBHOOK_URL", None):
         return "Hata: N8N_POLICY_WEBHOOK_URL tanımlı değil."
 
     pn = policy_number or ""
     payload = {
         "user_id": user_id,
+        "session_id": session_id,      # <<< önemli
         "policy_number": pn,
-        "product_no": pn[:3],  # None güvenli
+        "product_no": pn[:3],
     }
 
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(config.N8N_POLICY_WEBHOOK_URL, json=payload)
             response.raise_for_status()
-
             try:
-                json_data = response.json()
-                logger.debug("JSON yanıtı: %s", json_data)
-            except Exception as je:
-                logger.warning("Yanıt JSON olarak parse edilemedi: %s", je)
+                jd = response.json()
+            except Exception:
                 return response.text or "Poliçen işlendi."
 
-            out = _extract_output(json_data)
-            if out:
-                return out
-
-            # Geriye kalan durumlar
-            if isinstance(json_data, dict):
-                return json_data.get("message") or "Poliçen işlendi."
-            return "Beklenmeyen yanıt formatı."
+            return _extract_output(jd) or (jd.get("message") if isinstance(jd, dict) else "Poliçen işlendi.")
     except httpx.RequestError as req_error:
         logger.exception("Bağlantı hatası:")
         return f"Bağlantı hatası: {str(req_error)}"

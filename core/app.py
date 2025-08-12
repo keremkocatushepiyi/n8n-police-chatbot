@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.endpoints import chat
+from api.endpoints import identity
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -20,5 +21,6 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(chat.router)
+    app.include_router(identity.router)
 
     return app

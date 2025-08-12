@@ -2,9 +2,13 @@
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 import pdfplumber
+from uuid import uuid4
+
 from controllers.chat_controller import handle_prompt
+from controllers.policy_controller import handle_policy
 
 router = APIRouter()
+
 
 @router.post("/send-message")
 async def send_message(request: Request):
@@ -12,16 +16,19 @@ async def send_message(request: Request):
     prompt = body.get("prompt")
     user_id = body.get("user_id")
     policy_number = body.get("policy_number")
+    # Normalde frontend gönderir; gelmezse konuşma bölünmesin diye üretip döndürürüz
+    session_id = body.get("session_id") or str(uuid4())
 
     if not prompt:
-        return {"response": "Prompt boş olamaz."}
+        raise HTTPException(status_code=400, detail="prompt zorunlu")
     if not user_id:
-        return {"response": "Kullanıcı ID eksik."}
+        raise HTTPException(status_code=400, detail="user_id zorunlu")
     if not policy_number:
-        return {"response": "Poliçe numarası eksik."}
+        raise HTTPException(status_code=400, detail="policy_number zorunlu")
 
-    response = await handle_prompt(prompt, user_id, policy_number)
-    return {"response": response}
+    response = await handle_prompt(prompt, user_id, session_id, policy_number)
+    # session_id’yi her ihtimale karşı döndürüyoruz (frontend saklayabilir)
+    return {"response": response, "session_id": session_id}
 
 
 @router.post("/submit-policy")
@@ -29,34 +36,32 @@ async def submit_policy(request: Request):
     body = await request.json()
     user_id = body.get("user_id")
     policy_number = body.get("policy_number")
+    # Gelmezse sunucuda oluştur (yeni sohbet)
+    session_id = body.get("session_id") or str(uuid4())
 
     if not user_id or not policy_number:
-        return {"response": "Eksik bilgi gönderildi."}
+        raise HTTPException(status_code=400, detail="user_id ve policy_number zorunlu")
 
-    from controllers.policy_controller import handle_policy
-    response = await handle_policy(user_id, policy_number)
-    return {"response": response}
+    response = await handle_policy(user_id, session_id, policy_number)
+    # Frontend’in sessionStorage’a yazabilmesi için session_id’yi döndür
+    return {"response": response, "session_id": session_id}
 
 
 @router.post("/extract-text")
 async def extract_text(
     file: UploadFile = File(..., description="PDF dosyası"),
-    start_page: int = 1,                 # 1-indexed
-    end_page: int | None = None,         # None => son sayfaya kadar
+    start_page: int = 1,
+    end_page: int | None = None,
 ):
-    # Basit içerik türü kontrolü
     if file.content_type not in {"application/pdf", "application/octet-stream"}:
         raise HTTPException(status_code=400, detail="Lütfen bir PDF dosyası yükleyin.")
-
     try:
-        # UploadFile.file bir dosya-benzeri objedir; pdfplumber doğrudan açabilir.
         file.file.seek(0)
         with pdfplumber.open(file.file) as pdf:
             total_pages = len(pdf.pages)
             if total_pages == 0:
                 return JSONResponse({"text": "", "total_pages": 0})
 
-            # Sayfa sınırlarını ayarla
             if start_page < 1:
                 start_page = 1
             if end_page is None or end_page > total_pages:
@@ -64,11 +69,9 @@ async def extract_text(
             if start_page > end_page:
                 raise HTTPException(status_code=400, detail="start_page end_page'den büyük olamaz.")
 
-            # Metni topla
             chunks: list[str] = []
             for i in range(start_page - 1, end_page):
                 page = pdf.pages[i]
-                # Toleransları gerektiğinde ayarlayabilirsiniz
                 text = page.extract_text(x_tolerance=2, y_tolerance=2) or ""
                 if text:
                     chunks.append(text)
@@ -82,6 +85,5 @@ async def extract_text(
             "end_page": end_page,
             "text": full_text,
         }
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF okunurken hata oluştu: {e}")
