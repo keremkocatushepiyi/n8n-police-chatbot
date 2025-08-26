@@ -314,17 +314,31 @@ window.addEventListener('load', async () => {
     };
     ta.setAttribute('wrap', 'soft');
     ta.addEventListener('input', fit);
-    ta.addEventListener('keydown', handleEnter);
+    // ÇİFT TETİKLEMEYİ ÖNLE: HTML'de onkeydown varsa burada ekleme
+    if (!ta.getAttribute('onkeydown') && !ta._keydownBound) {
+      ta.addEventListener('keydown', handleEnter);
+      ta._keydownBound = true;
+    }
     ta.addEventListener('compositionstart', handleEnter);
     ta.addEventListener('compositionend', handleEnter);
     fit();
   }
 
-  // --- Poliçe girişi: Enter + form-level fallback ---
+  // --- Poliçe girişi: Enter + form-level (çift tetikleme korumalı) ---
+  const policyForm = document.getElementById('policy-form');
   const policyInput = document.getElementById('policy-number');
 
-  // 1) Input seviyesinde Enter
-  if (policyInput && !policyInput._bound) {
+  // 1) Form varsa SADECE form submit'ini dinle (Enter otomatik tetikler)
+  if (policyForm && !policyForm._bound) {
+    policyForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitPolicy();
+    }, true);
+    policyForm._bound = true;
+  }
+
+  // 2) Form yoksa (eski markup) input seviyesinde Enter'ı bağla
+  if (!policyForm && policyInput && !policyInput._bound) {
     policyInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey && !composing) {
         e.preventDefault();
@@ -336,28 +350,5 @@ window.addEventListener('load', async () => {
     policyInput._bound = true;
   }
 
-  // 2) Form seviyesinde fallback (form varsa)
-  const policyForm = document.getElementById('policy-form'); // form id'in buysa çalışır
-  if (policyForm && !policyForm._bound) {
-    policyForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      submitPolicy();
-    }, true);
-    policyForm._bound = true;
-  }
-
-  // 3) Son çare: policy-box açıkken ve fokus input'tayken Enter'ı yakala
-  const policyBox = document.getElementById('policy-box');
-  if (policyBox && !policyBox._globalBound) {
-    document.addEventListener('keydown', (e) => {
-      const active = document.activeElement;
-      const inPolicyBox = policyBox.contains(active);
-      if (inPolicyBox && e.key === 'Enter' && !e.shiftKey && !composing) {
-        // input yoksa veya submit tetiklenmediyse yakala
-        e.preventDefault();
-        submitPolicy();
-      }
-    }, true);
-    policyBox._globalBound = true;
-  }
+  // Global keydown fallback KALDIRILDI (çift tetiklemeyi önlemek için)
 });
