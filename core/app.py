@@ -14,7 +14,7 @@ def create_app() -> FastAPI:
     # CORS ayarları
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Geliştirme için açık; prod'da domain ile değiştir.
+        allow_origins=["*"],  
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
