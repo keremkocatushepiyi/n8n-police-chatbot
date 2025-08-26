@@ -192,7 +192,7 @@ button:hover {
   border-radius: var(--radius);
   border: 1px solid #ccc;
   font-size: 15px;
-  width: 100%;                  /* Form genişliği kadar */
+  width: 80%;                  /* Form genişliği kadar */
   max-width: 100%;
   box-sizing: border-box;
 }
