@@ -250,6 +250,13 @@ function resetPolicy() {
    Sayfa hazır olunca
 ======================= */
 window.addEventListener('load', async () => {
+  // Sayfa RELOAD ise, yeni poliçe butonuna basılmış gibi session'ı temizle
+  const nav = performance.getEntriesByType('navigation')[0];
+  if (nav && nav.type === 'reload') {
+    sessionStorage.removeItem("policy_number");
+    sessionStorage.removeItem("session_id");
+  }
+
   // Kimlikleri hazırla (ilk girişte)
   try {
     await ensureIds({ renewSession: false });
@@ -299,5 +306,19 @@ window.addEventListener('load', async () => {
     ta.addEventListener('compositionstart', handleEnter);
     ta.addEventListener('compositionend', handleEnter);
     fit();
+  }
+
+  // Poliçe numarası girişinde Enter ile gönder (IME uyumlu)
+  const policyInput = document.getElementById('policy-number');
+  if (policyInput && !policyInput._bound) {
+    policyInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !composing) {
+        e.preventDefault();
+        submitPolicy();
+      }
+    });
+    policyInput.addEventListener('compositionstart', () => { composing = true; });
+    policyInput.addEventListener('compositionend', () => { composing = false; });
+    policyInput._bound = true;
   }
 });
