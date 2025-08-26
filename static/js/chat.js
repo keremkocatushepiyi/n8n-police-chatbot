@@ -250,11 +250,23 @@ function resetPolicy() {
    Sayfa hazır olunca
 ======================= */
 window.addEventListener('load', async () => {
-  // Sayfa RELOAD ise, yeni poliçe butonuna basılmış gibi session'ı temizle
-  const nav = performance.getEntriesByType('navigation')[0];
-  if (nav && nav.type === 'reload') {
-    sessionStorage.removeItem("policy_number");
-    sessionStorage.removeItem("session_id");
+  // --- Reload tespiti: modern + eski fallback ---
+  let isReload = false;
+  try {
+    const navEntries = (performance && performance.getEntriesByType)
+      ? performance.getEntriesByType('navigation')
+      : null;
+    if (navEntries && navEntries[0]) {
+      isReload = navEntries[0].type === 'reload';
+    } else if (performance && performance.navigation) {
+      // Eski API fallback (type===1 -> reload)
+      isReload = performance.navigation.type === 1;
+    }
+  } catch (_) {}
+
+  if (isReload) {
+    sessionStorage.removeItem('policy_number');
+    sessionStorage.removeItem('session_id');
   }
 
   // Kimlikleri hazırla (ilk girişte)
@@ -277,7 +289,7 @@ window.addEventListener('load', async () => {
     }
   }
 
-  // Eğer sayfa yenilendiyse ve her iki değer de varsa chat’e geç
+  // Eğer geçerli session + policy varsa chat’e geç
   const sid = getSessionId();
   const pn  = sessionStorage.getItem("policy_number");
   if (sid && pn) {
@@ -308,8 +320,10 @@ window.addEventListener('load', async () => {
     fit();
   }
 
-  // Poliçe numarası girişinde Enter ile gönder (IME uyumlu)
+  // --- Poliçe girişi: Enter + form-level fallback ---
   const policyInput = document.getElementById('policy-number');
+
+  // 1) Input seviyesinde Enter
   if (policyInput && !policyInput._bound) {
     policyInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey && !composing) {
@@ -320,5 +334,30 @@ window.addEventListener('load', async () => {
     policyInput.addEventListener('compositionstart', () => { composing = true; });
     policyInput.addEventListener('compositionend', () => { composing = false; });
     policyInput._bound = true;
+  }
+
+  // 2) Form seviyesinde fallback (form varsa)
+  const policyForm = document.getElementById('policy-form'); // form id'in buysa çalışır
+  if (policyForm && !policyForm._bound) {
+    policyForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      submitPolicy();
+    }, true);
+    policyForm._bound = true;
+  }
+
+  // 3) Son çare: policy-box açıkken ve fokus input'tayken Enter'ı yakala
+  const policyBox = document.getElementById('policy-box');
+  if (policyBox && !policyBox._globalBound) {
+    document.addEventListener('keydown', (e) => {
+      const active = document.activeElement;
+      const inPolicyBox = policyBox.contains(active);
+      if (inPolicyBox && e.key === 'Enter' && !e.shiftKey && !composing) {
+        // input yoksa veya submit tetiklenmediyse yakala
+        e.preventDefault();
+        submitPolicy();
+      }
+    }, true);
+    policyBox._globalBound = true;
   }
 });

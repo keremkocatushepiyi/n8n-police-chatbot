@@ -10,8 +10,18 @@
   <!-- Poliçe Giriş Kutusu -->
   <div class="policy-box" id="policy-box">
     <h2>Poliçe Numaranızı Girin</h2>
-    <input type="text" id="policy-number" placeholder="Örn: P123456789">
-    <button onclick="submitPolicy()">Başla</button>
+
+    <!-- Enter ile çalışması için form eklendi -->
+    <form id="policy-form">
+      <input
+        type="text"
+        id="policy-number"
+        placeholder="Örn: P123456789"
+        autocomplete="off"
+      >
+      <!-- Enter submit'i yakalansın diye type=submit -->
+      <button type="submit">Başla</button>
+    </form>
 
     <div id="loading" class="loading" style="display: none;">
       <div class="spinner"></div>
@@ -33,6 +43,7 @@
     Yeni Poliçe
   </button>
 
-  <script src="/static/js/chat.js?v=3"></script>
+  <!-- JS cache-bust: v=4 (patch'in kesin yüklenmesi için) -->
+  <script src="/static/js/chat.js?v=4"></script>
 </body>
 </html>
