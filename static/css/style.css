@@ -176,13 +176,32 @@ button:hover {
   }
 }
 
+.policy-box form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Poliçe numarası input kutusu */
+.policy-box input {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid #ccc;
+  font-size: 15px;
+  width: 280px; /* Daha kompakt */
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Başla butonu */
 .policy-box button {
   background-color: var(--secondary);
   color: white;
-  padding: 14px 28px;
-  font-size: 16px;
+  padding: 12px 14px;
+  font-size: 15px;
   border: none;
-  width: 220px; 
+  width: 280px; /* Input ile eşit genişlik */
   border-radius: var(--radius);
   cursor: pointer;
   font-weight: 600;
