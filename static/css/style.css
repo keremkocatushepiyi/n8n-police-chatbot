@@ -177,35 +177,42 @@ button:hover {
 }
 
 .policy-box form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: center;
+  display: flex;                 /* Flex kullanıyoruz */
+  flex-direction: column;        /* Dikey hizala */
+  align-items: center;           /* Ortala */
+  gap: 12px;                     /* Aralarına boşluk bırak */
+  width: 100%;
+  max-width: 320px;             /* Daha kompakt */
+  margin: 0 auto;
 }
 
 /* Poliçe numarası input kutusu */
-.policy-box input {
+.policy-box form input#policy-number {
   padding: 12px 14px;
   border-radius: var(--radius);
   border: 1px solid #ccc;
   font-size: 15px;
-  width: 280px; /* Daha kompakt */
+  width: 100%;                  /* Form genişliği kadar */
   max-width: 100%;
   box-sizing: border-box;
 }
 
 /* Başla butonu */
-.policy-box button {
+.policy-box form button[type="submit"] {
   background-color: var(--secondary);
   color: white;
   padding: 12px 14px;
   font-size: 15px;
   border: none;
-  width: 280px; /* Input ile eşit genişlik */
+  width: 100%;                 /* Input genişliğiyle aynı */
   border-radius: var(--radius);
   cursor: pointer;
   font-weight: 600;
   transition: background-color 0.2s ease;
+}
+
+.policy-box form button[type="submit"]:hover {
+  background-color: var(--primary);
 }
 
 .policy-box button:hover {
@@ -259,30 +266,3 @@ button:hover {
 .input-area button:active {
   transform: translateY(0);
 }
-
-/* === Policy form'u dikey hizaya ZORLA (buton alta) === */
-.policy-box form{
-  display:grid !important;
-  grid-template-columns: 1fr !important;
-  row-gap:12px !important;
-  justify-items:center !important;
-  width:100%;
-  max-width:320px;   /* kompakt */
-  margin:0 auto;
-}
-
-/* input ve buton aynı genişlikte */
-.policy-box form input#policy-number{
-  width:100% !important;
-  max-width:100% !important;
-}
-
-.policy-box form button[type="submit"]{
-  width:100% !important;
-}
-
-/* Edge otomatik doldurma görünür kalsın */
-#policy-number{
-  autocomplete: on;            /* (HTML tarafı önemli) */
-}
-
