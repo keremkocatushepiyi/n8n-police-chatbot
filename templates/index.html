@@ -12,16 +12,18 @@
     <h2>Poliçe Numaranızı Girin</h2>
 
     <!-- Enter ile çalışması için form eklendi -->
-    <form id="policy-form" style="display:flex; flex-direction:column; gap:12px;">
+    <form id="policy-form" style="display:flex; flex-direction:column; gap:12px; align-items:center; width:100%; max-width:420px; margin:0 auto;">
       <input
         type="text"
         id="policy-number"
+        name="policy_number"           
         placeholder="Örn: P123456789"
-        autocomplete="off"
+        autocomplete="on"               
+        style="width:100%;"
       >
-      <!-- Enter submit'i yakalansın diye type=submit -->
-      <button type="submit">Başla</button>
+      <button type="submit" style="width:100%;">Başla</button>
     </form>
+
 
     <div id="loading" class="loading" style="display: none;">
       <div class="spinner"></div>
