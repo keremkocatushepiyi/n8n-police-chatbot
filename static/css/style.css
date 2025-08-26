@@ -260,4 +260,29 @@ button:hover {
   transform: translateY(0);
 }
 
+/* === Policy form'u dikey hizaya ZORLA (buton alta) === */
+.policy-box form{
+  display:grid !important;
+  grid-template-columns: 1fr !important;
+  row-gap:12px !important;
+  justify-items:center !important;
+  width:100%;
+  max-width:320px;   /* kompakt */
+  margin:0 auto;
+}
+
+/* input ve buton aynı genişlikte */
+.policy-box form input#policy-number{
+  width:100% !important;
+  max-width:100% !important;
+}
+
+.policy-box form button[type="submit"]{
+  width:100% !important;
+}
+
+/* Edge otomatik doldurma görünür kalsın */
+#policy-number{
+  autocomplete: on;            /* (HTML tarafı önemli) */
+}
 
