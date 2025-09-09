@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from controllers.chat_controller import handle_prompt
 from controllers.policy_controller import handle_policy
+from controllers.claim_controller import handle_claim, handle_claim_prompt   # ✅ artık ekliyoruz
 
 router = APIRouter()
 
@@ -15,19 +16,28 @@ async def send_message(request: Request):
     body = await request.json()
     prompt = body.get("prompt")
     user_id = body.get("user_id")
-    policy_number = body.get("policy_number")
-    # Normalde frontend gönderir; gelmezse konuşma bölünmesin diye üretip döndürürüz
     session_id = body.get("session_id") or str(uuid4())
+
+    is_police = body.get("is_police")
+    policy_number = body.get("policy_number")
+    claim_number = body.get("claim_number")
 
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt zorunlu")
     if not user_id:
         raise HTTPException(status_code=400, detail="user_id zorunlu")
-    if not policy_number:
-        raise HTTPException(status_code=400, detail="policy_number zorunlu")
+    if is_police is None:
+        raise HTTPException(status_code=400, detail="is_police zorunlu")
 
-    response = await handle_prompt(prompt, user_id, session_id, policy_number)
-    # session_id’yi her ihtimale karşı döndürüyoruz (frontend saklayabilir)
+    if is_police:
+        if not policy_number:
+            raise HTTPException(status_code=400, detail="policy_number zorunlu (is_police=true iken)")
+        response = await handle_prompt(prompt, user_id, session_id, policy_number)
+    else:
+        if not claim_number:
+            raise HTTPException(status_code=400, detail="claim_number zorunlu (is_police=false iken)")
+        response = await handle_claim_prompt(prompt, user_id, session_id, claim_number)
+
     return {"response": response, "session_id": session_id}
 
 
@@ -35,15 +45,26 @@ async def send_message(request: Request):
 async def submit_policy(request: Request):
     body = await request.json()
     user_id = body.get("user_id")
-    policy_number = body.get("policy_number")
-    # Gelmezse sunucuda oluştur (yeni sohbet)
     session_id = body.get("session_id") or str(uuid4())
 
-    if not user_id or not policy_number:
-        raise HTTPException(status_code=400, detail="user_id ve policy_number zorunlu")
+    is_police = body.get("is_police")
+    policy_number = body.get("policy_number")
+    claim_number = body.get("claim_number")
 
-    response = await handle_policy(user_id, session_id, policy_number)
-    # Frontend’in sessionStorage’a yazabilmesi için session_id’yi döndür
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id zorunlu")
+    if is_police is None:
+        raise HTTPException(status_code=400, detail="is_police zorunlu")
+
+    if is_police:
+        if not policy_number:
+            raise HTTPException(status_code=400, detail="policy_number zorunlu (is_police=true iken)")
+        response = await handle_policy(user_id, session_id, policy_number)
+    else:
+        if not claim_number:
+            raise HTTPException(status_code=400, detail="claim_number zorunlu (is_police=false iken)")
+        response = await handle_claim(user_id, session_id, claim_number)  # ✅ claim akışı
+
     return {"response": response, "session_id": session_id}
 
 

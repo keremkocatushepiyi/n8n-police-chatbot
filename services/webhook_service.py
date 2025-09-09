@@ -96,3 +96,75 @@ async def submit_policy_to_n8n(user_id: str, session_id: str, policy_number: str
     except Exception as e:
         logger.exception("Bilinmeyen hata:")
         return f"Bilinmeyen hata: {str(e)}"
+    
+
+async def submit_claim_to_n8n(user_id: str, session_id: str, claim_number: str) -> str:
+    if not getattr(config, "N8N_CLAIM_WEBHOOK_URL", None):
+        return "Hata: N8N_CLAIM_WEBHOOK_URL tanımlı değil."
+
+    cn = claim_number or ""
+    payload = {
+        "user_id": user_id,
+        "session_id": session_id,   
+        "claim_number": cn[:-2],
+        "claim_prefix": cn[-1], 
+        "prompt": "Hasar dosyasının güncel durumu"   
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(config.N8N_CLAIM_WEBHOOK_URL, json=payload)
+            response.raise_for_status()
+            try:
+                jd = response.json()
+            except Exception:
+                return response.text or "Hasar dosyan işlenemedi."
+
+            return _extract_output(jd) or (
+                jd.get("message") if isinstance(jd, dict) else "Hasar dosyan işlendi."
+            )
+    except httpx.RequestError as req_error:
+        logger.exception("Bağlantı hatası:")
+        return f"Bağlantı hatası: {str(req_error)}"
+    except httpx.HTTPStatusError as http_error:
+        logger.error("HTTP hatası: %s", http_error.response.text[:500])
+        return f"HTTP hatası: {http_error.response.status_code}"
+    except Exception as e:
+        logger.exception("Bilinmeyen hata:")
+        return f"Bilinmeyen hata: {str(e)}"
+
+
+async def send_claim_prompt_to_n8n(prompt: str, user_id: str, session_id: str, claim_number: str) -> str:
+    if not getattr(config, "N8N_CLAIM_WEBHOOK_URL", None):
+        return "Hata: N8N_CLAIM_WEBHOOK_URL tanımlı değil."
+
+    cn = claim_number or ""
+    payload = {
+        "prompt": prompt,              # <<< kullanıcı prompt'u
+        "user_id": user_id,
+        "session_id": session_id,
+        "claim_number": cn[:-2],
+        "claim_prefix": cn[-1],
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(config.N8N_CLAIM_WEBHOOK_URL, json=payload)
+            response.raise_for_status()
+            try:
+                jd = response.json()
+            except Exception:
+                return response.text or "Cevap alınamadı."
+
+            return _extract_output(jd) or (
+                jd.get("message") if isinstance(jd, dict) else "Cevap alınamadı."
+            )
+    except httpx.RequestError as req_error:
+        logger.exception("Bağlantı hatası:")
+        return f"Bağlantı hatası: {str(req_error)}"
+    except httpx.HTTPStatusError as http_error:
+        logger.error("HTTP hatası: %s", http_error.response.text[:500])
+        return f"HTTP hatası: {http_error.response.status_code}"
+    except Exception as e:
+        logger.exception("Bilinmeyen hata:")
+        return f"Bilinmeyen hata: {str(e)}"

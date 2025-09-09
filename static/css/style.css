@@ -75,31 +75,27 @@ body {
   gap: 10px;
   border-top: 1px solid #eee;
   background-color: #fff;
+  align-items: center;
 }
 
 textarea {
   flex: 1;
-  box-sizing: border-box;
-  resize: none;                 /* köşeden sürüklemeyi kapat */
+  resize: none;
   padding: 14px 16px;
   font-size: 16px;
   line-height: 1.45;
   border: 1.5px solid #aaa;
   border-radius: var(--radius);
   font-family: inherit;
-
-  min-height: 48px;             /* başlangıç yüksekliği */
-  max-height: 160px;            /* ~5-6 satır */
-  height: auto;                 /* JS ile ayarlanacak */
-
-  overflow-x: hidden;           /* yatay scrollbar yok */
-  overflow-y: hidden;           /* önce gizli, ihtiyaç olursa JS açacak */
+  min-height: 48px;
+  max-height: 160px;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: hidden;
   outline: none;
   transition: border 0.2s ease;
 }
 textarea:focus { border-color: var(--primary); }
-
-.input-area { align-items: center; } /* dikey hizayı düzeltir */
 
 button {
   background-color: var(--secondary);
@@ -136,18 +132,49 @@ button:hover {
   margin-bottom: 20px;
 }
 
-.policy-box input {
-  padding: 14px;
-  border-radius: var(--radius);
-  border: 1px solid #ccc;
-  font-size: 16px;
-  width: 280px;
-  margin-bottom: 16px;
+.policy-box form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
-.policy-box button {
+.policy-inputs {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.policy-box form input#policy-number,
+.policy-box form input#claim-number {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid #ccc;
+  font-size: 15px;
+  flex: 1;
+  min-width: 0;
+}
+
+.policy-box form button[type="submit"] {
   background-color: var(--secondary);
   color: white;
+  padding: 12px 14px;
+  font-size: 15px;
+  border: none;
+  width: 100%;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.policy-box form button[type="submit"]:hover {
+  background-color: var(--primary);
 }
 
 .loading {
@@ -167,63 +194,15 @@ button:hover {
 }
 
 @keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.policy-box form {
-  display: flex;                 /* Flex kullanıyoruz */
-  flex-direction: column;        /* Dikey hizala */
-  align-items: center;           /* Ortala */
-  gap: 12px;                     /* Aralarına boşluk bırak */
-  width: 100%;
-  max-width: 320px;             /* Daha kompakt */
-  margin: 0 auto;
-}
-
-/* Poliçe numarası input kutusu */
-.policy-box form input#policy-number {
-  padding: 12px 14px;
-  border-radius: var(--radius);
-  border: 1px solid #ccc;
-  font-size: 15px;
-  width: 80%;                  /* Form genişliği kadar */
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* Başla butonu */
-.policy-box form button[type="submit"] {
-  background-color: var(--secondary);
-  color: white;
-  padding: 12px 14px;
-  font-size: 15px;
-  border: none;
-  width: 100%;                 /* Input genişliğiyle aynı */
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-weight: 600;
-  transition: background-color 0.2s ease;
-}
-
-.policy-box form button[type="submit"]:hover {
-  background-color: var(--primary);
-}
-
-.policy-box button:hover {
-  background-color: var(--primary);
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .floating-action {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 99999; /* her şeyin üstünde */
+  z-index: 99999;
   padding: 12px 22px;
   border: none;
   border-radius: 30px;
@@ -239,12 +218,10 @@ button:hover {
 .floating-action:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 12px 28px rgba(0,0,0,0.25); }
 .floating-action:active { transform: scale(0.96); }
 
-/* Chat girişindeki Gönder butonunu hizala ve yükseklik sabitle */
 .input-area button {
-  height: 48px; /* textarea ile aynı yükseklik */
+  height: 48px;
   min-width: 90px;
   padding: 0 18px;
-  border: none;
   border-radius: var(--radius);
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: var(--text-light);
@@ -257,12 +234,10 @@ button:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,.12);
   transition: transform .1s ease, box-shadow .2s ease, background .2s ease;
 }
-
 .input-area button:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(0,0,0,.15);
 }
-
 .input-area button:active {
   transform: translateY(0);
 }

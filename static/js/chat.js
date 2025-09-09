@@ -1,15 +1,12 @@
 /* =======================
-   Kimlik yönetimi (backend kaynaklı)
+   Kimlik yönetimi
 ======================= */
-
-// Backend'ten id al
 async function fetchIdsFromServer() {
   const res = await fetch("/generate-ids", { method: "GET" });
   if (!res.ok) throw new Error("Kimlik üretim servisi başarısız.");
   return await res.json(); // { user_id, session_id }
 }
 
-// user_id ve/veya session_id eksikse backend'ten tamamla
 async function ensureIds({ renewSession = false } = {}) {
   let userId = localStorage.getItem("user_id");
   let sessionId = sessionStorage.getItem("session_id");
@@ -22,7 +19,6 @@ async function ensureIds({ renewSession = false } = {}) {
       userId = data.user_id;
       localStorage.setItem("user_id", userId);
     }
-    // renewSession true ise sadece yeni session_id kullan
     if (!sessionId && data.session_id) {
       sessionId = data.session_id;
       sessionStorage.setItem("session_id", sessionId);
@@ -31,17 +27,15 @@ async function ensureIds({ renewSession = false } = {}) {
   return { userId, sessionId };
 }
 
-function getUserId() {
-  return localStorage.getItem("user_id");
-}
-function getSessionId() {
-  return sessionStorage.getItem("session_id");
-}
+function getUserId() { return localStorage.getItem("user_id"); }
+function getSessionId() { return sessionStorage.getItem("session_id"); }
 
 /* =======================
    Basit durum
 ======================= */
 let policyNumber = null;
+let claimNumber = null;
+let isPolice = null;
 
 /* =======================
    UI yardımcıları
@@ -93,16 +87,17 @@ async function sendPrompt() {
   const prompt = textarea.value.trim();
   if (!prompt) { sending = false; return; }
 
-  // Kimlikleri garanti altına al
   try {
     const pn = sessionStorage.getItem("policy_number");
-    if (!pn) {
-      alert("Poliçe numarası bulunamadı. Lütfen poliçe girin.");
+    const cn = sessionStorage.getItem("claim_number");
+    const ip = sessionStorage.getItem("is_police");
+
+    if (!pn && !cn) {
+      alert("Poliçe veya hasar dosya numarası bulunamadı. Lütfen giriş yapın.");
       sending = false;
       return;
     }
 
-    // session_id yoksa backend'ten tamamlamaya çalış
     if (!getSessionId()) {
       await ensureIds({ renewSession: false });
     }
@@ -126,7 +121,9 @@ async function sendPrompt() {
         prompt,
         user_id: uid,
         session_id: sid,
-        policy_number: pn
+        is_police: ip === "true",
+        policy_number: pn || null,
+        claim_number: cn || null
       })
     });
 
@@ -138,7 +135,6 @@ async function sendPrompt() {
       throw new Error(msg);
     }
 
-    // Sunucu güvenlik ağı olarak session_id üretmiş olabilir
     if (data.session_id && !getSessionId()) {
       sessionStorage.setItem("session_id", data.session_id);
     }
@@ -154,21 +150,26 @@ async function sendPrompt() {
 }
 
 /* =======================
-   Poliçe gönderme
+   Poliçe / Hasar gönderme
 ======================= */
 async function submitPolicy() {
-  const input = document.getElementById("policy-number");
-  if (!input) return;
+  const policyInput = document.getElementById("policy-number");
+  const claimInput  = document.getElementById("claim-number");
+  if (!policyInput || !claimInput) return;
 
-  const value = (input.value || "").trim();
-  if (!value) {
-    alert("❗ Lütfen geçerli bir poliçe numarası girin.");
+  const policyVal = (policyInput.value || "").trim();
+  const claimVal  = (claimInput.value  || "").trim();
+
+  if (!policyVal && !claimVal) {
+    alert("❗ Lütfen poliçe numarası veya hasar dosya numarası girin.");
     return;
   }
 
-  // user_id ve (gerekirse) geçici session_id garanti olsun
+  isPolice = !!policyVal;
+  const value = isPolice ? policyVal : claimVal;
+
   try {
-    await ensureIds({ renewSession: true }); // poliçe başlangıcında yeni session istiyoruz
+    await ensureIds({ renewSession: true });
   } catch (e) {
     console.error("Kimlik alma hatası:", e);
     alert("Kimlik alınamadı. Lütfen sayfayı yenileyin.");
@@ -176,11 +177,22 @@ async function submitPolicy() {
   }
 
   const uid = getUserId();
-  sessionStorage.setItem("policy_number", value);
-  policyNumber = value;
+
+  if (isPolice) {
+    sessionStorage.setItem("policy_number", value);
+    sessionStorage.removeItem("claim_number");
+  } else {
+    sessionStorage.setItem("claim_number", value);
+    sessionStorage.removeItem("policy_number");
+  }
+  sessionStorage.setItem("is_police", isPolice.toString());
+
+  policyNumber = isPolice ? value : null;
+  claimNumber = !isPolice ? value : null;
 
   // UI loading
-  input.style.display = "none";
+  policyInput.style.display = "none";
+  claimInput.style.display = "none";
   const pbTitle = document.querySelector("#policy-box h2");
   if (pbTitle) pbTitle.style.display = "none";
   const pbBtn = document.querySelector("#policy-box button");
@@ -189,13 +201,14 @@ async function submitPolicy() {
   if (loadingEl) loadingEl.style.display = "block";
 
   try {
-    // session_id GÖNDERMİYORUZ → backend üretip döndürecek
     const res = await fetch("/submit-policy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         user_id: uid,
-        policy_number: value
+        is_police: isPolice,
+        policy_number: isPolice ? value : null,
+        claim_number: isPolice ? null : value
       })
     });
 
@@ -207,12 +220,11 @@ async function submitPolicy() {
       throw new Error(msg);
     }
 
-    // Backend’in ürettiği gerçek session_id’yi kaydet
     if (data && data.session_id) {
       sessionStorage.setItem("session_id", data.session_id);
     }
 
-    // Chat arayüzünü göster
+    // Chat arayüzünü aç
     const pb = document.getElementById("policy-box");
     if (pb) pb.style.display = "none";
     const chat = document.getElementById("chat-container");
@@ -224,7 +236,7 @@ async function submitPolicy() {
     const ta = document.getElementById("prompt");
     if (ta) { ta.focus(); ta.selectionStart = ta.value.length; }
 
-    addMessage((data && data.response) || "✅ Poliçen başarıyla işlendi.", "bot");
+    addMessage((data && data.response) || "✅ Başarıyla işlendi.", "bot");
   } catch (error) {
     alert("Bir hata: " + (error?.message || error));
     console.error("submitPolicy err:", error);
@@ -235,120 +247,15 @@ async function submitPolicy() {
 }
 
 /* =======================
-   Yeni poliçe (sadece oturum temizle)
+   Yeni poliçe (reset)
 ======================= */
 function resetPolicy() {
   try {
     sessionStorage.removeItem("policy_number");
+    sessionStorage.removeItem("claim_number");
+    sessionStorage.removeItem("is_police");
     sessionStorage.removeItem("session_id");
   } finally {
     window.location.reload();
   }
 }
-
-/* =======================
-   Sayfa hazır olunca
-======================= */
-window.addEventListener('load', async () => {
-  // --- Reload tespiti: modern + eski fallback ---
-  let isReload = false;
-  try {
-    const navEntries = (performance && performance.getEntriesByType)
-      ? performance.getEntriesByType('navigation')
-      : null;
-    if (navEntries && navEntries[0]) {
-      isReload = navEntries[0].type === 'reload';
-    } else if (performance && performance.navigation) {
-      // Eski API fallback (type===1 -> reload)
-      isReload = performance.navigation.type === 1;
-    }
-  } catch (_) {}
-
-  if (isReload) {
-    sessionStorage.removeItem('policy_number');
-    sessionStorage.removeItem('session_id');
-  }
-
-  // Kimlikleri hazırla (ilk girişte)
-  try {
-    await ensureIds({ renewSession: false });
-  } catch (e) {
-    console.warn("Başlangıçta kimlikler alınamadı:", e);
-  }
-
-  // Yeni poliçe butonu
-  const btn = document.getElementById('new-policy-btn');
-  if (btn) {
-    btn.style.display = "none";
-    if (!btn._bound) {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        resetPolicy();
-      });
-      btn._bound = true;
-    }
-  }
-
-  // Eğer geçerli session + policy varsa chat’e geç
-  const sid = getSessionId();
-  const pn  = sessionStorage.getItem("policy_number");
-  if (sid && pn) {
-    const pb = document.getElementById("policy-box");
-    if (pb) pb.style.display = "none";
-    const chat = document.getElementById("chat-container");
-    if (chat) chat.style.display = "flex";
-
-    const newPolicyBtnEl = document.getElementById("new-policy-btn");
-    if (newPolicyBtnEl) newPolicyBtnEl.style.display = "block";
-  }
-
-  // Autosize textarea
-  const ta = document.getElementById('prompt');
-  if (ta) {
-    const fit = () => {
-      ta.style.height = 'auto';
-      const maxH = 160; // ~5-6 satır
-      const h = Math.min(ta.scrollHeight, maxH);
-      ta.style.height = h + 'px';
-      ta.style.overflowY = (ta.scrollHeight > maxH) ? 'auto' : 'hidden';
-    };
-    ta.setAttribute('wrap', 'soft');
-    ta.addEventListener('input', fit);
-    // ÇİFT TETİKLEMEYİ ÖNLE: HTML'de onkeydown varsa burada ekleme
-    if (!ta.getAttribute('onkeydown') && !ta._keydownBound) {
-      ta.addEventListener('keydown', handleEnter);
-      ta._keydownBound = true;
-    }
-    ta.addEventListener('compositionstart', handleEnter);
-    ta.addEventListener('compositionend', handleEnter);
-    fit();
-  }
-
-  // --- Poliçe girişi: Enter + form-level (çift tetikleme korumalı) ---
-  const policyForm = document.getElementById('policy-form');
-  const policyInput = document.getElementById('policy-number');
-
-  // 1) Form varsa SADECE form submit'ini dinle (Enter otomatik tetikler)
-  if (policyForm && !policyForm._bound) {
-    policyForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      submitPolicy();
-    }, true);
-    policyForm._bound = true;
-  }
-
-  // 2) Form yoksa (eski markup) input seviyesinde Enter'ı bağla
-  if (!policyForm && policyInput && !policyInput._bound) {
-    policyInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey && !composing) {
-        e.preventDefault();
-        submitPolicy();
-      }
-    });
-    policyInput.addEventListener('compositionstart', () => { composing = true; });
-    policyInput.addEventListener('compositionend', () => { composing = false; });
-    policyInput._bound = true;
-  }
-
-  // Global keydown fallback KALDIRILDI (çift tetiklemeyi önlemek için)
-});

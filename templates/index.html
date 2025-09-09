@@ -7,25 +7,34 @@
 </head>
 <body>
 
-  <!-- Poliçe Giriş Kutusu -->
+  <!-- Poliçe / Hasar Giriş Kutusu -->
   <div class="policy-box" id="policy-box">
-    <h2>Poliçe Numaranızı Girin</h2>
+    <h2>Poliçe / Hasar Dosya Bilgilerinizi Girin</h2>
 
-    <!-- Enter ile çalışması için form eklendi -->
-    <form id="policy-form">
-      <input
-        type="text"
-        id="policy-number"
-        name="policy_number"
-        placeholder="Örn: P123456789"
-        autocomplete="on"
-      >
+    <!-- Form -->
+    <form id="policy-form" onsubmit="event.preventDefault(); submitPolicy();">
+      <div class="policy-inputs">
+        <input
+          type="text"
+          id="policy-number"
+          name="policy_number"
+          placeholder="Örn: P123456789"
+          autocomplete="on"
+        >
+        <input
+          type="text"
+          id="claim-number"
+          name="claim_number"
+          placeholder="Örn: H123456789"
+          autocomplete="on"
+        >
+      </div>
       <button type="submit">Başla</button>
     </form>
 
     <div id="loading" class="loading" style="display: none;">
       <div class="spinner"></div>
-      <p>Poliçe işleniyor, lütfen bekleyin...</p>
+      <p>Bilgiler işleniyor, lütfen bekleyin...</p>
     </div>
   </div>
 
@@ -38,12 +47,13 @@
     </div>
   </div>
 
-  <!-- Yeni Poliçe Butonu (inline onclick ile garantili) -->
-  <button id="new-policy-btn" class="floating-action" aria-label="Yeni Poliçe" style="display:none;" title="Yeni Poliçe" onclick="resetPolicy()">
+  <!-- Yeni Poliçe Butonu -->
+  <button id="new-policy-btn" class="floating-action" aria-label="Yeni Poliçe"
+          style="display:none;" title="Yeni Poliçe" onclick="resetPolicy()">
     Yeni Poliçe
   </button>
 
-  <!-- JS cache-bust: v=4 (patch'in kesin yüklenmesi için) -->
-  <script src="/static/js/chat.js?v=5"></script>
+  <!-- JS cache-bust -->
+  <script src="/static/js/chat.js?v=6"></script>
 </body>
 </html>
