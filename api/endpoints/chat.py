@@ -3,10 +3,12 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 import pdfplumber
 from uuid import uuid4
+import io
+import pdfplumber
 
 from controllers.chat_controller import handle_prompt
 from controllers.policy_controller import handle_policy
-from controllers.claim_controller import handle_claim, handle_claim_prompt   # ✅ artık ekliyoruz
+from controllers.claim_controller import handle_claim, handle_claim_prompt  
 
 router = APIRouter()
 
@@ -75,25 +77,32 @@ async def extract_text(
     end_page: int | None = None,
 ):
     if file.content_type not in {"application/pdf", "application/octet-stream"}:
-        raise HTTPException(status_code=400, detail="Lütfen bir PDF dosyası yükleyin.")
+        raise HTTPException(status_code=400, detail="Lütfen geçerli bir PDF dosyası yükleyin.")
+
     try:
-        file.file.seek(0)
-        with pdfplumber.open(file.file) as pdf:
+        file_content = await file.read()
+        
+        with pdfplumber.open(io.BytesIO(file_content)) as pdf:
             total_pages = len(pdf.pages)
+            
             if total_pages == 0:
                 return JSONResponse({"text": "", "total_pages": 0})
 
             if start_page < 1:
                 start_page = 1
-            if end_page is None or end_page > total_pages:
-                end_page = total_pages
-            if start_page > end_page:
+            
+            real_end_page = end_page if (end_page is not None and end_page <= total_pages) else total_pages
+
+            if start_page > real_end_page:
                 raise HTTPException(status_code=400, detail="start_page end_page'den büyük olamaz.")
 
             chunks: list[str] = []
-            for i in range(start_page - 1, end_page):
+            
+            for i in range(start_page - 1, real_end_page):
                 page = pdf.pages[i]
-                text = page.extract_text(x_tolerance=2, y_tolerance=2) or ""
+                
+                text = page.extract_text(x_tolerance=2, y_tolerance=2, layout=False) or ""
+                
                 if text:
                     chunks.append(text)
 
@@ -103,8 +112,10 @@ async def extract_text(
             "filename": file.filename,
             "total_pages": total_pages,
             "start_page": start_page,
-            "end_page": end_page,
+            "end_page": real_end_page,
             "text": full_text,
         }
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"PDF okunurken hata oluştu: {e}")
+        print(f"Hata detayı: {e}")
+        raise HTTPException(status_code=500, detail=f"PDF okunurken hata oluştu: {str(e)}")
